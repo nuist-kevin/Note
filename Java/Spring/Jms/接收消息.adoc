@@ -43,7 +43,7 @@ public class ExampleListener implements MessageListener {
 }
 ----
 
-一旦实现了我们自己的`MessageListener`，就该创建一个消息监听器容器了。
+一旦实现了我们自己的 `MessageListener`，就该创建一个消息监听器容器了。
 
 下面就是一个使用Spring带给我们的众多消息监听器容器之一的示例（用的是`DefaultMessageListenerContainer`）：
 
@@ -63,7 +63,7 @@ public class ExampleListener implements MessageListener {
 
 == `SessionAwareMessageListener` 接口
 
-`SessionAwareMessageListener`接口是 Spring 特有的接口，它提供了和 JMS 的`MessageListener`类似的功能，
+`SessionAwareMessageListener` 接口是 Spring 特有的接口，它提供了和 JMS 的`MessageListener`类似的功能，
 而且它还提供了对消息 `Session` 的访问。
 
 ```java
@@ -78,14 +78,14 @@ public interface SessionAwareMessageListener {
 
 如果希望我们的 MDP 能够对任何收到的消息进行响应，可以选择实现这个接口。
 Spring 提供的所有消息监听器容器都支持实现了 `MessageListener` 或 `SessionAwareMessageListener` 的 MDP ，
-实现`SessionAwareMessageListener`接口的类的不利点就在于它和 Spring 绑定了，使不使用它完全看我们的实际使用情况。
+实现 `SessionAwareMessageListener` 接口的类的不利点就在于它和 Spring 绑定了，使不使用它完全看我们的实际使用情况。
 
-要注意，`SessionAwareMessageListener`的 `onMessage(..)` 方法会抛出 `JMSException`，
+要注意，`SessionAwareMessageListener` 的 `onMessage(..)` 方法会抛出 `JMSException`，
 因此，使用者要负责处理它抛出的异常。
 
 == `MesssageListenerAdapter` 类
 
-`MesssageListenerAdapter`类是 Spring 对异步消息支持的最终杀器：一句话，它允许我们用几乎任何类作为一个MDP。
+`MesssageListenerAdapter` 类是 Spring 对异步消息支持的最终杀器：一句话，它允许我们用几乎任何类作为一个MDP。
 
 看看下面的这个接口定义，这个接口既没有继承  `MessageListener`  也没有继承 `SessionAwareMessageListener`，
 但它仍然能够通过 `MesssageListenerAdapter` 类将其当成 MDP 来使用。

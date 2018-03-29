@@ -8,3 +8,122 @@
 
 
 == 异步接收
+
+NOTE: Spring 还支持通过 `@JmsListener` 注解来配置监听器，这是目前为止设置异步接收器最方便的方式
+
+和 *EJB* 世界的 *消息驱动的Bean*（MDB）类似，*消息驱动的POJO*（MDP）也是JMS消息的接收者，
+而 MDP 的唯一的限制就是，它必须实现 `javax.jms.MessagListener` 接口。
+要注意的是，这种情况下，我们的POJO会在多线程环境中接收消息，所以一定要确保我们的实现是线程安全的。
+
+下面是一个简单的实现：
+
+[source, java]
+----
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageListener;
+import javax.jms.TextMessage;
+
+public class ExampleListener implements MessageListener {
+
+    public void onMessage(Message message) {
+        if (message instanceof TextMessage) {
+            try {
+                System.out.println(((TextMessage) message).getText());
+            }
+            catch (JMSException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        else {
+            throw new IllegalArgumentException("Message must be of type TextMessage");
+        }
+    }
+
+}
+----
+
+一旦实现了我们自己的`MessageListener`，就该创建一个消息监听器容器了。
+
+下面就是一个使用Spring带给我们的众多消息监听器容器之一的示例（用的是`DefaultMessageListenerContainer`）：
+
+```xml
+<!-- 这是我们自己实现的消息驱动POJO -->
+<bean id="messageListener" class="jmsexample.ExampleListener" />
+
+<!-- 这是消息监听器容器 -->
+<bean id="jmsContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+    <property name="connectionFactory" ref="connectionFactory"/>
+    <property name="destination" ref="destination"/>
+    <property name="messageListener" ref="messageListener" />
+</bean>
+```
+
+要想了解各个消息监听器容器实现的完整功能描述，可以去参考 Spring 的 API 文档。
+
+== `SessionAwareMessageListener` 接口
+
+`SessionAwareMessageListener`接口是 Spring 特有的接口，它提供了和 JMS 的`MessageListener`类似的功能，
+而且它还提供了对消息 `Session` 的访问。
+
+```java
+package org.springframework.jms.listener;
+
+public interface SessionAwareMessageListener {
+
+    void onMessage(Message message, Session session) throws JMSException;
+
+}
+```
+
+如果希望我们的 MDP 能够对任何收到的消息进行响应，可以选择实现这个接口。
+Spring 提供的所有消息监听器容器都支持实现了 `MessageListener` 或 `SessionAwareMessageListener` 的 MDP ，
+实现`SessionAwareMessageListener`接口的类的不利点就在于它和 Spring 绑定了，使不使用它完全看我们的实际使用情况。
+
+要注意，`SessionAwareMessageListener`的 `onMessage(..)` 方法会抛出 `JMSException`，
+因此，使用者要负责处理它抛出的异常。
+
+== `MesssageListenerAdapter` 类
+
+`MesssageListenerAdapter`类是 Spring 对异步消息支持的最终杀器：一句话，它允许我们用几乎任何类作为一个MDP。
+
+看看下面的这个接口定义，这个接口既没有继承  `MessageListener`  也没有继承 `SessionAwareMessageListener`，
+但它仍然能够通过 `MesssageListenerAdapter` 类将其当成 MDP 来使用。
+
+```java
+public interface MessageDelegate {
+
+    void handleMessage(String message);
+
+    void handleMessage(Map message);
+
+    void handleMessage(byte[] message);
+
+    void handleMessage(Serializable message);
+
+}
+```
+
+```java
+public class DefaultMessageDelegate implements MessageDelegate {
+    // implementation elided for clarity...
+}
+```
+
+上面这个类对于 JMS 完全没有依赖，就是一个 POJO，通过如下配置将其作为 MDP 来使用：
+
+```xml
+<!-- this is the Message Driven POJO (MDP) -->
+<bean id="messageListener" class="org.springframework.jms.listener.adapter.MessageListenerAdapter">
+    <constructor-arg>
+        <bean class="jmsexample.DefaultMessageDelegate"/>
+    </constructor-arg>
+</bean>
+
+<!-- and this is the message listener container... -->
+<bean id="jmsContainer" class="org.springframework.jms.listener.DefaultMessageListenerContainer">
+    <property name="connectionFactory" ref="connectionFactory"/>
+    <property name="destination" ref="destination"/>
+    <property name="messageListener" ref="messageListener" />
+</bean>
+```

@@ -1,0 +1,17 @@
+= 注解驱动的监听点
+:toc:
+
+最简单的异步接收消息的方法就是使用注解监听，简单来说，它可以让我们将一个 bean 的方法暴露为一个消息监听点。
+
+[source,java]
+----
+@Component
+public class MyService {
+
+    @JmsListener(destination = "myDestination")
+    public void processOrder(String data) { ... }
+}
+----
+
+上面例子的意思就是，只要有消息在 `javax.jms.Destination` “myDestination”，
+那么 `processOrder` 方法就会被调用（）
